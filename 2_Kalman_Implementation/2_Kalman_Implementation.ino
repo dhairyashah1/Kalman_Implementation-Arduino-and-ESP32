@@ -89,12 +89,12 @@ BLA::Matrix<1,1> soc = {100.0};     // % soc
 BLA::Matrix<2,2> M = {1.0, 0,
                       0, 1.0};
 
-BLA::Matrix<1,1> prev_soc = {90}; // % previous soc (ssumed)
+BLA::Matrix<1,1> prev_soc = {90};   // % previous soc (ssumed)
 BLA::Matrix<1,1> temp = {0};
 
 /////////////////////////////  SETUP //////////////////////////////////////////////////////
 void setup() {
-  Serial.begin(115200);            // serial setup
+  Serial.begin(115200);             // serial setup
   pinMode(outputPin, OUTPUT);
   pinMode(analogPinOne, INPUT);
   pinMode(analogPinTwo, INPUT);
@@ -108,7 +108,7 @@ void loop() {
   ///////////////////////////////////////////////////////////////////////////////////////
   analogWrite(outputPin, outputValue);
 
-  Serial.print("Output: ");     //display output values for monitoring with a computer
+  Serial.print("Output: ");        //display output values for monitoring with a computer
   Serial.println(outputValue);
   
   ////////////////////////////////////////////////////////////////////////////////////////
@@ -142,7 +142,7 @@ void loop() {
   limit_checker();
   update_variables();
 
-  Serial.println();     //extra spaces after one cycle to make debugging data easier to read
+  Serial.println();                   //extra spaces after one cycle to make debugging data easier to read
   Serial.println(); 
   delay(3000); // 3 sec delay
 }
@@ -172,18 +172,18 @@ void calculate_soc(){
 /* Reads the cvoltage across probes. calculates voltage across battery  and displays it */
 void measure_voltage(){
   // voltage across probes
-  valueProbeOne = analogRead(analogPinOne);    // read the input value at probe one
-  voltageProbeOne = (valueProbeOne*5000)/1023;     //calculate voltage at probe one in milliVolts => 10 bit ADC
+  valueProbeOne = analogRead(analogPinOne);     // read the input value at probe one
+  voltageProbeOne = (valueProbeOne*5000)/1023;  //calculate voltage at probe one in milliVolts => 10 bit ADC
   Serial.print("Voltage Probe One (mV): ");     //display voltage at probe one
   Serial.println(voltageProbeOne);  
   
-  valueProbeTwo = analogRead(analogPinTwo);    // read the input value at probe two
-  voltageProbeTwo = (valueProbeTwo*5000)/1023;     //calculate voltage at probe two in milliVolts
+  valueProbeTwo = analogRead(analogPinTwo);     // read the input value at probe two
+  voltageProbeTwo = (valueProbeTwo*5000)/1023;  //calculate voltage at probe two in milliVolts
   Serial.print("Voltage Probe Two (mV): ");     //display voltage at probe two
   Serial.println(voltageProbeTwo);  
   
   batteryVoltage = voltageProbeOne - voltageProbeTwo;     //calculate battery voltage 
-  Serial.print("Battery Voltage (mV): ");     //display battery voltage
+  Serial.print("Battery Voltage (mV): ");       //display battery voltage
   Serial.println(batteryVoltage);
 }
 
@@ -191,40 +191,40 @@ void measure_voltage(){
 void measure_current(){
   // temporary 
   current = (voltageProbeOne - voltageProbeTwo)/resistance; 
-  Serial.print("Target Current (mA): ");     //display target current 
+  Serial.print("Target Current (mA): ");       //display target current 
   Serial.println(targetCurrent);  
-  Serial.print("Battery Current (mA): ");     //display actual current
+  Serial.print("Battery Current (mA): ");      //display actual current
   Serial.println(current);  
 }
 
 /* Fixes the error in current as per measured and desired current(constant current) and displays it */
 void current_error_fixer(){
   // current error calculation and displaying it
-  currentError = targetCurrent - current;     //difference between target current and measured current
-  Serial.print("Current Error  (mA): ");     //display current error 
-  Serial.println(currentError);  
+  currentError = targetCurrent - current;      //difference between target current and measured current
+  Serial.print("Current Error  (mA): ");       //display current error 
+  Serial.println(currentError);   
 
   // bounding range of current - can change (current varies -> temperature varies)
-  if(abs(currentError) > 50)     //if output error is large enough more than diff of 50mA, adjust output 
-   {
+  if(abs(currentError) > 50)                  //if output error is large enough more than diff of 50mA, adjust output 
+   { 
     outputValue = outputValue + currentError/2;
-    if(outputValue < 1)    //output can never go below 0
+    if(outputValue < 1)                       //output can never go below 0
       outputValue = 0;
-    else if(outputValue > 254)     //output can never go above 255
+    else if(outputValue > 254)                //output can never go above 255
       outputValue = 255;
-    analogWrite(outputPin, outputValue);     //write the new output value
+    analogWrite(outputPin, outputValue);      //write the new output value
    }
 }
 
 
 /* Reads the temperature of the battery and displays it */
 void measure_temperature(){
-  valueProbeThree = analogRead(analogPinThree);    // read the input value at probe three  
+  valueProbeThree = analogRead(analogPinThree);  // read the input value at probe three  
   tmp36Voltage = valueProbeThree * 5.0/1023;     // converting that reading to voltage
 
   // currently not in use - formula depends on sensor used (temporary)
-  temperatureC = (tmp36Voltage - 0.05) * 100 ;     //converting from 10 mv per degree wit 50 mV offset to degrees ((voltage - 50mV) times 100)
-  Serial.print("Temperature (degrees C) ");     //display the temperature in degrees C
+  temperatureC = (tmp36Voltage - 0.05) * 100 ;   //converting from 10 mv per degree wit 50 mV offset to degrees ((voltage - 50mV) times 100)
+  Serial.print("Temperature (degrees C) ");      //display the temperature in degrees C
   Serial.println(temperatureC); 
  
  /*
@@ -238,26 +238,26 @@ void measure_temperature(){
 /* Checks, bounds various electrical parameters of the battery and changes as per need displays it */
 void limit_checker(){
  
-  if(temperatureC > cutoffTemperatureC)     //stop charging if the battery temperature exceeds the safety threshold
+  if(temperatureC > cutoffTemperatureC)        //stop charging if the battery temperature exceeds the safety threshold
    {
     outputValue = 0;
     Serial.println("Max Temperature Exceeded: ");
    }
    
   /*
-  if(temperatureF > cutoffTemperatureF)     //stop charging if the battery temperature exceeds the safety threshold
+  if(temperatureF > cutoffTemperatureF)        //stop charging if the battery temperature exceeds the safety threshold
    {
     outputValue = 0;
    }
    */
    
-   if(batteryVoltage > cutoffVoltage)     //stop charging if the battery voltage exceeds the safety threshold
+   if(batteryVoltage > cutoffVoltage)          //stop charging if the battery voltage exceeds the safety threshold
    {
     outputValue = 0;
     Serial.println("Max Voltage Exceeded: ");
    }  
  
-   if(millis() > cutoffTime)     //stop charging if the charge time exceeds threshold charging time
+   if(millis() > cutoffTime)                  //stop charging if the charge time exceeds threshold charging time
    {
     outputValue = 0;
     Serial.println("Max Charge Time Exceeded");
