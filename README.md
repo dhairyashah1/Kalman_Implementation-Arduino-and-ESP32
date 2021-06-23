@@ -16,7 +16,7 @@
 ## To-Do List
 - [x] Implemented basic Implementation using Arduino hardware 
 - [x] Started with Kalman Implementation using Arduino  
-- [ ] Complete Kalman Implementation using Arduino          (ETA 2-3 days)
+- [x] Complete Kalman Implementation using Arduino          (ETA 2-3 days)
 - [ ] Make the code compatible for ESP32 using Arduino Ide  (ETA 5-6 days)
 - [ ] Integrate and test using real time sensors
 - [ ] Convert the whole code using ESP-IDF as well
