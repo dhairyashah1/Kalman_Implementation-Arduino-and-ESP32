@@ -2,7 +2,21 @@
 
 // including library for matrix operations
 #include "BasicLinearAlgebra.h"
+
+// Library for I2C communication with OLED
+#include <Wire.h>
+// including OLED libraries
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
 using namespace BLA;
+
+//////////////////////// OLED CONFIGURATION  //////////////////////////////////////////////////////
+#define SCREEN_WIDTH 128                   // OLED display width, in pixels
+#define SCREEN_HEIGHT 64                   // OLED display height, in pixels
+#define OLED_RESET -1                      // OLED RESET Pin # (-1 -> same as chip reset)
+#define SCREEN_ADDRESS 0x3D                // Address; 0x3D for 128x64, 0x3C for 128x32
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 //////////////////////// GLOBAL CONSTANTS //////////////////////////////////////////////////////
 const float e = 2.718281828459045;  
@@ -108,10 +122,17 @@ BLA::Matrix<1> temp = {0};
 
 /////////////////////////////  SETUP //////////////////////////////////////////////////////
 void setup() {
-  Serial.begin(115200);                      // serial setup
+  //PIN setup
+  Serial.begin(115200);                        // serial setup
   pinMode(analogPinOne, INPUT);              // voltage probe
   pinMode(analogPinTwo, INPUT);              // temperature
   pinMode(analogPinThree, INPUT);            // current sensing pin
+
+  //OLED setup
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 10);
 } 
 
 
@@ -145,9 +166,13 @@ void loop() {
   limit_checker();
   update_variables();
 
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.display();
+  
   Serial.println();                            //extra spaces after one cycle to make debugging data easier to read
   Serial.println(); 
-  delay(time_diff);                            // 3 sec delay
+  delay(time_diff);                            //3 sec delay
 }
 
 /* Updates the current and previous variables for electric current, voltage, soc and other variables after each iteration*/
@@ -165,6 +190,10 @@ void calculate_soc(){ //rounding in lookup table for soc values (indexing)
   Serial.print("State of Charge (SOC): ");
   Serial.println(soc);
   Serial.println("==================================================");
+  
+  display.print("State of Charge (SOC):");
+  display.setTextSize(3);
+  display.println(soc);
 }
 
 /* Reads the cvoltage across probes. calculates voltage across battery  and displays it */
