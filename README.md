@@ -18,7 +18,7 @@
 - [x] Started with Kalman Implementation using Arduino  
 - [x] Complete Kalman Implementation using Arduino         
 - [x] Make the code compatible for ESP32 using Arduino Ide  
-- [ ] Add OLED functionality for easier debugging of SOC
+- [x] Add OLED functionality for easier debugging of SOC
 - [ ] Send the data using WiFi/SoftAP for a server page
 - [ ] Integrate and test using real time sensors
 - [ ] Convert the whole code using ESP-IDF as well
