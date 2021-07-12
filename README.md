@@ -5,11 +5,14 @@
 .
 ├── 1_Basic_Implementation_Arduino           - Basic Implementation
 │   └── 1_Basic_Implementation_Arduino.ino
-├── 2_Kalman_Implementation                  - Kalman Implementation
-│   └── 2_Kalman_Implementation.ino
+├── 2_1_Kalman_Implementation                  - Kalman Implementation
+│   └── 2_1_Kalman_Implementation.ino
+├── 2_2_Kalman_Implementation                  - Kalman Implementation
+│   └── 2_2_Kalman_Implementation.ino
 ├── assets                              
 │   ├── output1.png
 │   └── setup.jpeg
+│   └── esp_setup.jpeg
 ├── LICENSE
 └── README.md
 ```
@@ -29,4 +32,7 @@
 - Output of Serial Monitor <img src="./assets/output1.png"/>
 
 ## Arduino and ESP setup
+- Current Hardware setup
+<img src="./assets/esp_setup.jpeg" />
+- Old testing Seup
 <img src="./assets/setup.jpeg" />
