@@ -9,6 +9,14 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 
+// including libraries for sensors(current, coltage and temperature)
+
+#include <Adafruit_ADS1X15.h>
+#include <WiFi.h>
+#include <WebServer.h>
+ 
+Adafruit_ADS1115 ads;
+
 using namespace BLA;
 
 //////////////////////// OLED CONFIGURATION  //////////////////////////////////////////////////////
@@ -55,24 +63,23 @@ float cutoffTemperatureC = 75;                //maximum battery temperature that
 long cutoffTime = 3600*1000;                  //maximum charge time of 1 hour that should not be exceeded (in seconds)
     
 // voltage reading probe across battery (other terminal is GND)
-int analogPinOne = 0;                         //first voltage probe connected to analog pin 1 = A0
-float valueProbeOne = 0;                      //variable to store the analog value of analogPinOne
-float voltageProbeOne = 0;                    //calculated voltage at analogPinOne as per ADC resolution and maximum range capacity
+int16_t analogPinMeasureBatteryVoltage = 0;                         //first voltage probe connected to analog pin 1 = A0
+float valueProbeMeasureBatteryVoltage = 0;                      //variable to store the analog value of analogPinMeasureBatteryVoltage
+float voltageProbeMeasureBatteryVoltage = 0;                    //calculated voltage at analogPinMeasureBatteryVoltage as per ADC resolution and maximum range capacity
 
 // analog pin to measure temperature
-int analogPinTwo = 1;                         //second voltage probe connected to analog pin 2 = A1
-float valueProbeTwo = 0;                      //variable to store the value of analogPinTwo
-float tmp36Voltage = 0;                       //calculated voltage at analogPinTwo
-float temperatureC = 20;                      //calculated temperature of probe in degrees C
+int16_t analogPinTemp = 1;                    //second voltage probe connected to analog pin 2 = A1
+float valueProbeTemp = 0;                     //variable to store the value of analogPinTemp
+float temperatureC = 0;                       //calculated voltage at analogPinTemp
 float prev_temperatureC = 0;                  //variable to store the previous temperature
 //float temperatureF = 0;                     //calculated temperature of probe in degrees F
 
 // pin to measure current from current sensor
-int analogPinThree = 0;                       //first voltage probe connected to analog pin 3 = A2
-float valueProbeThree = 0;                    //variable to store the analog value of analogPinThree
-float voltageProbeThree = 0;                  //calculated voltage at analogPinThree
+int16_t analogPinCurrent = 0;                     //first voltage probe connected to analog pin 3 = A2
+float valueProbeCurrent = 0;                  //variable to store the analog value of analogPinCurrent
+float voltageProbeCurrent = 0;                //calculated voltage at analogPinCurrent
 
-float voltageDifference = 0;                  //difference in voltage between analogPinOne and GND
+float voltageDifference = 0;                  //difference in voltage between analogPinMeasureBatteryVoltage and GND
 float batteryVoltage = 0;                     //calculated voltage of battery (considering voltage drop across power resistor)
 
 float current = 0;                            //calculated current through the load (in mA)
@@ -124,24 +131,34 @@ BLA::Matrix<1> temp = {0};
 void setup() {
   //PIN setup
   Serial.begin(115200);                        // serial setup
-  pinMode(analogPinOne, INPUT);              // voltage probe
-  pinMode(analogPinTwo, INPUT);              // temperature
-  pinMode(analogPinThree, INPUT);            // current sensing pin
+  pinMode(analogPinMeasureBatteryVoltage, INPUT);              // voltage probe
+  pinMode(analogPinTemp, INPUT);               // temperature
+  pinMode(analogPinCurrent, INPUT);            // current sensing pin
 
   //OLED setup
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
   display.setCursor(0, 10);
+
+  //ADS sensor setup
+  // ads.setGain(GAIN_TWOTHIRDS);  +/- 6.144V  1 bit = 0.1875mV (default)
+  ads.setGain(GAIN_ONE);       // +/- 4.096V  1 bit = 0.125mV
+  // ads.setGain(GAIN_TWO);        +/- 2.048V  1 bit = 0.0625mV
+  // ads.setGain(GAIN_FOUR);       +/- 1.024V  1 bit = 0.03125mV
+  // ads.setGain(GAIN_EIGHT);      +/- 0.512V  1 bit = 0.015625mV
+  // ads.setGain(GAIN_SIXTEEN);    +/- 0.256V  1 bit = 0.0078125mV 
+  ads.begin();
 } 
 
 
 /////////////////////////////  LOOP //////////////////////////////////////////////////////
 void loop() { 
   ////////////////////////////////////////////////////////////////////////////////////////
-  measure_current();
-  measure_voltage();
   measure_temperature();
+  measure_voltage();
+  delay(10);
+  measure_current();
 
   // Extended Kalman Filter Implementation
   U(0,0) = prev_current;
@@ -198,13 +215,13 @@ void calculate_soc(){ //rounding in lookup table for soc values (indexing)
 
 /* Reads the cvoltage across probes. calculates voltage across battery  and displays it */
 void measure_voltage(){
-  // voltage across probes
-  valueProbeOne = analogRead(analogPinOne);         // read the input value at probe one
-  voltageProbeOne = (valueProbeOne*30)/1023;        //calculate voltage at probe one in Volts (Max value = 30 V) => 10 bit ADC
+  // voltage across probes ==> R1 = 39k & R2 = 5.1k
+  valueProbeMeasureBatteryVoltage = ads.readADC_SingleEnded(1);                         // read the input value at voltage probe
+  voltageProbeMeasureBatteryVoltage = (valueProbeMeasureBatteryVoltage)*(30.125/1000)* 8.64705;        //calculate voltage at probe one in Volts (Max value = 30 V) => 16 bit ADC
   Serial.print("Voltage Probe One (V): ");          //display voltage at probe one
-  Serial.println(voltageProbeOne);  
+  Serial.println(voltageProbeMeasureBatteryVoltage);  
     
-  voltageDifference = voltageProbeOne;
+  voltageDifference = voltageProbeMeasureBatteryVoltage;
   batteryVoltage = voltageDifference - current*resistance;     //calculated battery voltage = voltage difference across probes - voltage drop across power resistor
   Serial.print("Battery Voltage (V): ");            //display battery voltage
   Serial.println(batteryVoltage);
@@ -212,21 +229,21 @@ void measure_voltage(){
 
 /* Reads the current as per analog reading and displays it */
 void measure_current(){
-  valueProbeThree = analogRead(analogPinThree);     // read the input value at probe three
-  voltageProbeThree = (valueProbeThree*50)/1023;    //calculate voltage at probe one in Amperes (Full Max. value = 50 A) => 10 bit ADC
-  current = voltageProbeThree;                      // sensor readings 
-  Serial.print("Battery Current (A): ");            //display actual current
+  valueProbeCurrent = ads.readADC_SingleEnded(2);     // read the input value at probe three
+  voltageProbeCurrent = valueProbeCurrent*0.125/1000; //calculate voltage at probe one in Amperes (Full Max. value = 50 A) => 16 bit ADC
+  current = (voltageProbeCurrent-1.5959)/0.015;       // actual current
+  Serial.println("Current Voltage: ");
+  Serial.println(voltageProbeCurrent);
+  
+  Serial.print("Battery Current (A): ");              //display actual current
   Serial.println(current);  
 }
 
 
 /* Reads the temperature of the battery and displays it */
 void measure_temperature(){
-  valueProbeTwo = analogRead(analogPinTwo);         // read the input value at probe two  
-  tmp36Voltage = valueProbeTwo*30.0/1023;           // converting that reading to voltage
-
-  // currently not in use - formula depends on sensor used (temporary)
-  temperatureC = (tmp36Voltage - 0.05) * 100 ;      //converting from 10 mv per degree wit 50 mV offset to degrees ((voltage - 50mV) times 100)
+  valueProbeTemp = ads.readADC_SingleEnded(0);      //Read temperature ADC value
+  temperatureC = valueProbeTemp*0.125/10;           // converting that reading to voltage
   Serial.print("Temperature (degrees C) ");         //display the temperature in degrees C
   Serial.println(temperatureC); 
  
